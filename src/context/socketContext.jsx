@@ -10,6 +10,8 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     socketRef.current = io("http://localhost:8000");
     return () => {
+
+      console.log("i home clear")
       socketRef.current.disconnect();
     };
   }, []);

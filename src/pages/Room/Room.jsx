@@ -1,18 +1,22 @@
 
-import React, { useRef, useState, useEffect, useCallback, use } from 'react';
+import React, { useRef, useState, useEffect, useCallback, use ,useContext} from 'react';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff,Monitor, MonitorOff,Fullscreen ,Minimize  } from 'lucide-react';
 import { useParams } from "react-router-dom";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import "../../App.css"
+
 import { useNavigate } from "react-router-dom";
+import { useSocket } from '../../context/socketContext';
 
 
 
  
-export default function Room() {
+export default function Room({availableOffer,setAvailableOffer}) {
+
+
   const { roomId,username } = useParams();
   const navigate = useNavigate()
-  const mySocketRef = useRef()
+  const mySocketRef = useSocket()
   const partnerSocketId = useRef()
   const peerRef = useRef()
   const localStreamRef = useRef()
@@ -28,6 +32,11 @@ export default function Room() {
   const [screenStream,setScreenStream]= useState(null)
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isFullScreen,setIsFullScreen]=  useState(false)
+  // const [availableOffer,setAvailableOffer] = useState([])
+  const [isOfferPresent,setIsOfferPresent] = useState(false)
+  const [ismyOfferSent,setIsmyOfferSent] = useState(false)
+  // const [isOfferSent,setIsOfferSent] = useState()
+  // const [waitingForAcceptCall,setWaitingForAcceptCall] = useState()
 
 
 
@@ -162,9 +171,28 @@ export default function Room() {
       endCall()
       setIsCallActive(false)
     }
+    if (connectionStatus==="failed") {
+      alert("it failed this time try again")
+      mySocketRef.current.emit("failed-connection")
+       endCall()
+    }
   },[connectionStatus])
 
  
+  useEffect(()=>{
+
+
+    const offerPersent =  availableOffer.some(
+    (ele) => ele.roomId === roomId && ele.username !== username
+  );
+  const offerSend = availableOffer.some(
+     (ele) => ele.roomId === roomId && ele.username === username
+  )
+
+
+setIsmyOfferSent(offerSend)
+  setIsOfferPresent(offerPersent)
+  },[availableOffer])
 
 
 
@@ -197,7 +225,8 @@ async function handleNegotiation() {
   }
   
   console.log("offer",payload)
-  mySocketRef.current.emit("offer",payload)
+
+ mySocketRef.current.emit("offer",payload)
   
 
   }catch(e){
@@ -314,7 +343,7 @@ async function handleNegotiation() {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
     }
-
+   mySocketRef.current.emit("end-call")
     setRemoteStream(null);
     setIsCallActive(false);
     setConnectionStatus('disconnected');
@@ -326,17 +355,17 @@ async function handleNegotiation() {
 
     try {
       if (!isFullScreen) {
-        // Enter fullscreen
+    
         if (remoteVideoRef.current.requestFullscreen) {
           await remoteVideoRef.current.requestFullscreen();
         } else if (remoteVideoRef.current.webkitRequestFullscreen) {
-          // Safari support
+       
           await remoteVideoRef.current.webkitRequestFullscreen();
         } else if (remoteVideoRef.current.mozRequestFullScreen) {
-          // Firefox support
+      
           await remoteVideoRef.current.mozRequestFullScreen();
         } else if (remoteVideoRef.current.msRequestFullscreen) {
-          // IE/Edge support
+         
           await remoteVideoRef.current.msRequestFullscreen();
         }
       } 
@@ -350,25 +379,7 @@ async function handleNegotiation() {
 
 
 
-// async function answer(offer) {
 
- 
-//    peerRef.current = createPeer(false)
-//     await  peerRef.current.setRemoteDescription(offer)
-    
-//     console.log(localStreamRef.current.srcObject)
-//    await localStreamRef.current.srcObject.getTracks().forEach(element => {
-//    peerRef.current.addTrack(element,localStreamRef.current.srcObject)
-//  });
-  
-
-//   const answer = await peerRef.current.createAnswer()
-//    await peerRef.current.setLocalDescription(answer)
-
-  
-  
- 
-// }
 
   const toggleVideo = () => {
     if (localStream) {
@@ -401,9 +412,7 @@ async function handleNegotiation() {
       const answer = await peerRef.current.createAnswer();
       await peerRef.current.setLocalDescription(answer);
       
-      // In a real app, send this offer to the remote peer
-
-
+  
         const payload = {
            target:partnerSocketId.current,
            caller:mySocketRef.current.id,
@@ -442,8 +451,12 @@ async function handleNegotiation() {
   };
 
 
+  
 
 
+const joinCallRoom = ()=>{
+  mySocketRef.current.emit("join-room", { roomId,username });
+}
 
 
   
@@ -453,11 +466,23 @@ async function handleNegotiation() {
   
 
 
-  mySocketRef.current = io("http://localhost:8000");
+  // mySocketRef.current = io("http://localhost:8000");
+
+  if (mySocketRef.current===null) {
+     
+    return  navigate("/")
+
+  }
+
+
+
+
+
+  if (roomId==="null" || username==="null") {
+    alert(" i did not enter username or room id ")
+     return  navigate("/")
+  }
   
-
-
-    mySocketRef.current.emit("join-room", { roomId,username });
     
     mySocketRef.current.on("ice-candidate",async (candidate)=>{
        try {
@@ -470,7 +495,9 @@ async function handleNegotiation() {
      }
       })
   
-    mySocketRef.current.on("joined-user",async (id) => {
+    mySocketRef.current.on("joined-user",async (id) => { // who call and and joiner id 
+
+      console.log("join user on")
 
       partnerSocketId.current = id
 
@@ -483,15 +510,7 @@ async function handleNegotiation() {
 
       console.log("caller")
 
-      // mySocketRef.current.on("offer",payload=>{
-
-      //   console.log("offer com in fornt")
-      //    console.log("offer coming",payload.sdp)
-      //    answerCall(payload.sdp)
-      // }
-      
-      // )
-
+  
            mySocketRef.current.on("answer",payload=>{
       
         peerRef.current.setRemoteDescription(payload.sdp)
@@ -501,9 +520,9 @@ async function handleNegotiation() {
     });
 
 
-    mySocketRef.current.on("host-user", (id) => {
+    mySocketRef.current.on("host-user", (id) => { // who join and and host id 
 
-
+   
        partnerSocketId.current = id
       
       //  
@@ -523,20 +542,43 @@ async function handleNegotiation() {
   
     });
 
+    mySocketRef.current.on("updated-offer",(offers)=>{
+      console.log(offers)
+    setAvailableOffer(offers)
+    })
+    
+
     mySocketRef.current.on("user-already",()=>{
       alert("user already exist")
     })
 
+
+
      mySocketRef.current.on("room-full",()=>{
       alert(" room is full or same name user already there try another")
     })
+
+      mySocketRef.current.on("failed-connection",()=>{
+        alert("connection is faild please try again")
+        endCall()
+      })
     
     
 
 
      return () => {
       
-    mySocketRef.current.disconnect();
+     mySocketRef.current.off("room-full");
+      mySocketRef.current.off("user-already");
+       mySocketRef.current.off("updated-offer");
+       mySocketRef.current.off("offer")
+  mySocketRef.current.off("host-user")
+  mySocketRef.current.off("answer")
+  mySocketRef.current.off("failed-connection")
+    mySocketRef.current.off("joined-user")  
+mySocketRef.current.off("ice-candidate")  
+
+
   };
 
 
@@ -627,7 +669,18 @@ async function handleNegotiation() {
         {/* Controls */}
         <div className="bg-gray-800 rounded-lg p-6">
           <div className="flex justify-center items-center gap-4 mb-4">
-            {connectionStatus==="connected"&& (
+            { !isCallActive?(
+
+
+                <button
+                onClick={joinCallRoom}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Phone size={20} />
+                {isOfferPresent?" Answer Call" :`${ismyOfferSent? "waiting of answer":" Start Call "}` }
+               
+              </button>
+            ) : (
               <div className="flex gap-4">
                 <button
                   onClick={toggleVideo}
