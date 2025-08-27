@@ -8,10 +8,9 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:8000");
+    socketRef.current = io(import.meta.env.VITE_SERVER_URL,{ transports: ["websocket"],});
     return () => {
 
-      console.log("i home clear")
       socketRef.current.disconnect();
     };
   }, []);
