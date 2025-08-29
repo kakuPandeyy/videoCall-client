@@ -11,11 +11,7 @@ export default function Home() {
     navigate(`/room/${id}/${username}`);
   };
 
-  const joinRoom = () => {
-    const roomId = prompt("Enter room ID:");
-    const username = prompt("create you username")
-    if (roomId) navigate(`/room/${roomId}/${username}`);
-  };
+ 
 
 
   return (
@@ -23,7 +19,6 @@ export default function Home() {
       <h1 className="mb-10">Video Call App</h1>
       <div className=" flex flex-row justify-center gap-7">
       <button onClick={createRoom}>Create Room</button>
-      <button onClick={joinRoom}>Join Room</button>
       <button onClick={()=>navigate("/offersList")}> choose user</button>
       </div>
 

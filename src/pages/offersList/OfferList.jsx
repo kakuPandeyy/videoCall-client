@@ -44,16 +44,16 @@ export default function OfferList({availableOffer,setAvailableOffer}) {
     <div className=' flex justify-center items-center'>
 
         <h1 className=' absolute top-10 '> JOIN WITH </h1>
-          <div className=' grid grid-cols-5 gap-7  '>
+          <div className=' grid grid-cols-1 lg:grid-cols-3 gap-7  '>
 
-          { availableOffer.map((ele,index)=>{
+          { availableOffer.length===0 ?(<h1 className=' text-gray-300'> No one is Online  </h1>) :availableOffer &&availableOffer.map((ele,index)=>{
 
             return(
 
-                  <button onClick={()=>handleJoin(ele.roomId)}  key={index} className='  flex flex-rom gap-3 rounded-4xl glow-btn '> 
+                  <button onClick={()=>handleJoin(ele.roomId)}  key={index} className='  flex flex-rom gap-3 rounded-4xl glow-btn justify-center w-md lg:w-[250px] '> 
        <PhoneCall size={28} color="#28c356" />
 
-       <span className=' text-amber-50 '>{ele.username}</span>
+       <span className=' text-amber-50  '>{ele.username}</span>
        </button>
             )
     

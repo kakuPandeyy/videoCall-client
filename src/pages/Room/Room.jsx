@@ -38,25 +38,30 @@ export default function Room({availableOffer,setAvailableOffer}) {
   // const [isOfferSent,setIsOfferSent] = useState()
   // const [waitingForAcceptCall,setWaitingForAcceptCall] = useState()
 
+  
+//   async function getIceServers() {
+//   const response = await fetch("http://localhost:8000/ice-token");
+//   return await response.json();
+// }
 
 
-  const iceServers = {
-    iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                // Add more STUN servers for better connectivity
-                { urls: 'stun:stun.services.mozilla.com' },
-                { urls: 'stun:stun.stunprotocol.org:3478' } ,
-      {
-      urls: 'turn:your-turn-server.com:3478',
-      username: 'your-username',
-      credential: 'your-password'
-    }
-    ]
-  };
+//   const iceServers = {
+//     iceServers: [
+//     { urls: 'stun:stun.l.google.com:19302' },
+//                 { urls: 'stun:stun1.l.google.com:19302' },
+//                 { urls: 'stun:stun2.l.google.com:19302' },
+//                 { urls: 'stun:stun3.l.google.com:19302' },
+//                 { urls: 'stun:stun4.l.google.com:19302' },
+//                 // Add more STUN servers for better connectivity
+//                 { urls: 'stun:stun.services.mozilla.com' },
+//                 { urls: 'stun:stun.stunprotocol.org:3478' } ,
+//       {
+//       urls: 'turn:your-turn-server.com:3478',
+//       username: 'your-username',
+//       credential: 'your-password'
+//     }
+//     ]
+//   };
 
 
 
@@ -111,16 +116,26 @@ export default function Room({availableOffer,setAvailableOffer}) {
   }, [screenStream, isScreenSharing]);
 
 
+  async function createPeerConnection() {
+  const res = await fetch("http://localhost:8000/ice-token");
+  const iceServers = await res.json();
+
+ 
+
+  const pc = new RTCPeerConnection({iceServers:iceServers });
+  return pc;
+}
 
 
-   const createPeer = useCallback(() => {
+   const createPeer = useCallback( async() => {
     try {
       
+          
+      const peer = await createPeerConnection()
 
-      const peer = new RTCPeerConnection(iceServers);
 
-
-
+  
+    console.log(peer)
   
       // peer.onnegotiationneeded =  handleNegotiation
     
@@ -302,7 +317,7 @@ async function handleNegotiation() {
       if (!stream) return;
 
       // Create peer connection
-      peerRef.current = createPeer();
+      peerRef.current =await createPeer();
       if (!peerRef.current) return;
 
       // Add local stream tracks to peer connection
@@ -433,7 +448,7 @@ async function handleNegotiation() {
       if (!stream) return;
 
       // Create peer connection
-       peerRef.current = createPeer();
+       peerRef.current = await  createPeer();
       if (!peerRef.current) return;
 
       // Add local stream tracks to peer connection
