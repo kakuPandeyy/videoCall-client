@@ -76,7 +76,7 @@ export default function Room({availableOffer,setAvailableOffer}) {
       });
 
       console.log('Got local stream:', stream);
-      setLocalStream(stream);
+       setLocalStream(stream);
 
       // Set the video source AFTER we have the ref
       if (localStreamRef.current) {
@@ -96,8 +96,10 @@ export default function Room({availableOffer,setAvailableOffer}) {
   useEffect(()=>{
     if (localStreamRef.current&&localStream) {
       localStream.current = localStream
+      console.log("done")
     }
-   
+
+  console.log(localStream)
 
   },[localStream])
 
@@ -117,7 +119,7 @@ export default function Room({availableOffer,setAvailableOffer}) {
 
 
   async function createPeerConnection() {
-  const res = await fetch("http://localhost:8000/ice-token");
+  const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/ice-token`);
   const iceServers = await res.json();
 
  
@@ -326,6 +328,10 @@ async function handleNegotiation() {
         peerRef.current.addTrack(track, stream);
       });
 
+    
+
+
+      
       
       console.log('Call started successfully');
 
@@ -338,21 +344,32 @@ async function handleNegotiation() {
 
    const endCall = () => {
     // Stop local stream
+
+    console.log(localStream)
     if (localStream) {
-      localStream.getTracks().forEach(track => {
+       localStream.getTracks().forEach(track => {
         track.stop();
       });
+    
       setLocalStream(null);
     }
 
+   console.log(localStreamRef.current)
     // Close peer connection
+
+  
     if (peerRef.current) {
+
+      console.log("cleaing in end call")
       peerRef.current.close();
       peerRef.current = null;
+
+    
     }
 
     // Clear video elements
     if (localStreamRef.current) {
+     
       localStreamRef.current.srcObject = null;
     }
     if (remoteVideoRef.current) {
@@ -574,8 +591,9 @@ const joinCallRoom = ()=>{
     })
 
       mySocketRef.current.on("failed-connection",()=>{
+          endCall()
         alert("connection is faild please try again")
-        endCall()
+      
       })
     
     
