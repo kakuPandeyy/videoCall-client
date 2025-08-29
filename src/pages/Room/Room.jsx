@@ -21,6 +21,7 @@ export default function Room({availableOffer,setAvailableOffer}) {
   const peerRef = useRef()
   const localStreamRef = useRef()
   const remoteVideoRef = useRef()
+   const iceCandidatesQueue = useRef([]);
 
 
   const [localStream, setLocalStream] = useState(null);
@@ -32,6 +33,7 @@ export default function Room({availableOffer,setAvailableOffer}) {
   const [screenStream,setScreenStream]= useState(null)
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isFullScreen,setIsFullScreen]=  useState(false)
+
   // const [availableOffer,setAvailableOffer] = useState([])
   const [isOfferPresent,setIsOfferPresent] = useState(false)
   const [ismyOfferSent,setIsmyOfferSent] = useState(false)
@@ -149,7 +151,9 @@ export default function Room({availableOffer,setAvailableOffer}) {
             if (event.candidate) {
                mySocketRef.current.emit("ice-candidate",{target:partnerSocketId.current,candidate:event.candidate})
              }
-        }
+        } else if (!event.candidate) {
+                console.log('ICE gathering completed');
+            }
       };
 
       // Handle remote stream
@@ -165,6 +169,14 @@ export default function Room({availableOffer,setAvailableOffer}) {
         console.log('Connection state:', peer.connectionState);
         
       };
+
+
+
+      peer.oniceconnectionstatechange = () => {
+            console.log('ICE connection state:', peer.iceConnectionState);
+        };
+
+
       peer.onnegotiationneeded = handleNegotiation
 
       peerRef.current = peer
@@ -234,6 +246,8 @@ async function handleNegotiation() {
     
     
       const offer = await peerRef.current.createOffer()
+
+    
      await peerRef.current.setLocalDescription(offer)
   const payload = {
     target:partnerSocketId.current,
@@ -440,10 +454,21 @@ async function handleNegotiation() {
 
     try {
        await peerRef.current.setRemoteDescription(offer)
+
+
+          while (iceCandidatesQueue.current.length > 0) {
+                const candidate = iceCandidatesQueue.current.shift();
+                await peerRef.current.addIceCandidate(candidate);
+            }
       
       const answer = await peerRef.current.createAnswer();
-      await peerRef.current.setLocalDescription(answer);
+
       
+
+      
+       await  peerRef.current.setLocalDescription(answer);
+      
+  
   
         const payload = {
            target:partnerSocketId.current,
@@ -497,6 +522,29 @@ const joinCallRoom = ()=>{
 
   
 
+               mySocketRef.current.on("answer",async(payload)=>{
+
+            console.log("useeffe", payload)
+      
+           await peerRef.current.setRemoteDescription(payload.sdp)
+
+   while (iceCandidatesQueue.current.length > 0) {
+                const candidate = iceCandidatesQueue.current.shift();
+                await peerRef.current.addIceCandidate(candidate);
+            }
+
+
+        
+       })
+
+      mySocketRef.current.on("offer",payload=>{
+
+        console.log("offer com in fornt")
+         console.log("offer coming",payload.sdp)
+         answerCall(payload.sdp)
+      }
+      
+      )
 
   // mySocketRef.current = io("http://localhost:8000");
 
@@ -517,14 +565,22 @@ const joinCallRoom = ()=>{
   
     
     mySocketRef.current.on("ice-candidate",async (candidate)=>{
-       try {
-        if (peerRef.current&& peerRef.current.remoteDescription) {
-          peerRef.current.addIceCandidate(candidate);
+        try {
+            console.log('Processing ICE candidate...');
+            
+            if (peerRef.current && peerRef.current.remoteDescription) {
+                // Remote description is set, add candidate immediately
+                await peerRef.current.addIceCandidate(candidate);
+                console.log('ICE candidate added successfully');
+            } else {
+                // Remote description not set yet, queue the candidate
+                console.log('Queueing ICE candidate');
+                iceCandidatesQueue.current.push(candidate);
+            }
+            
+        } catch (error) {
+            console.error('Error adding ICE candidate:', error);
         }
-       
-     } catch (e) {
-    console.error("Error adding ice candidate", e);
-     }
       })
   
     mySocketRef.current.on("joined-user",async (id) => { // who call and and joiner id 
@@ -543,11 +599,7 @@ const joinCallRoom = ()=>{
       console.log("caller")
 
   
-           mySocketRef.current.on("answer",payload=>{
-      
-        peerRef.current.setRemoteDescription(payload.sdp)
-        
-       })
+
 
     });
 
@@ -561,14 +613,7 @@ const joinCallRoom = ()=>{
        
       console.log("host joined:", id);
 
-       mySocketRef.current.on("offer",payload=>{
-
-        console.log("offer com in fornt")
-         console.log("offer coming",payload.sdp)
-         answerCall(payload.sdp)
-      }
-      
-      )
+ 
     
        
   

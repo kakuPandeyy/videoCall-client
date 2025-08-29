@@ -50,7 +50,7 @@ export default function OfferList({availableOffer,setAvailableOffer}) {
 
             return(
 
-                  <button onClick={()=>handleJoin(ele.roomId)}  key={index} className='  flex flex-rom gap-3 rounded-4xl glow-btn justify-center w-md lg:w-[250px] '> 
+                  <button onClick={()=>handleJoin(ele.roomId)}  key={index} className='  flex flex-rom gap-3 rounded-4xl glow-btn justify-center w-[200px] lg:w-[250px] '> 
        <PhoneCall size={28} color="#28c356" />
 
        <span className=' text-amber-50  '>{ele.username}</span>
